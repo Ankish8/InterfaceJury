@@ -1,3 +1,8 @@
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv'
 
-export { kv };
+const kv = createClient({
+  url: process.env.REDIS_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
+})
+
+export { kv }
