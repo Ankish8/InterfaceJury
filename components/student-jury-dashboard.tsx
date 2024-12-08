@@ -49,26 +49,60 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
         const savedMarks = await getMarks();
         const initialData = students.map((name, index) => {
           const kitKatPoints = getInitialKitKatPoints(name);
-          const savedStudentData = savedMarks[`student-${index + 1}`] || {};
-          return {
+          const studentId = `student-${index + 1}`;
+          const savedStudentData = savedMarks[studentId];
+          
+          const studentData = {
             id: index + 1,
             name,
-            uiDesign: savedStudentData.uiDesign || 0,
-            userResearch: savedStudentData.userResearch || 0,
-            prototype: savedStudentData.prototype || 0,
+            uiDesign: 0,
+            userResearch: 0,
+            prototype: 0,
             kitKatPoints,
-            total: savedStudentData.total || (kitKatPoints * 10),
-            comment: savedStudentData.comment || '',
-            lastModified: savedStudentData.lastModified || new Date().toISOString()
+            total: kitKatPoints * 10,
+            comment: '',
+            lastModified: new Date().toISOString()
+          };
+
+          if (savedStudentData) {
+            return {
+              ...studentData,
+              ...savedStudentData,
+              kitKatPoints: studentData.kitKatPoints, // Always use the predefined KitKat points
+              total: (savedStudentData.uiDesign || 0) + 
+                    (savedStudentData.userResearch || 0) + 
+                    (savedStudentData.prototype || 0) + 
+                    (studentData.kitKatPoints * 10)
+            };
           }
+
+          return studentData;
         });
         setStudentData(initialData);
-      } catch {
+      } catch (error) {
+        console.error('Failed to fetch marks:', error);
         toast({
           title: "Error",
           description: "Failed to fetch saved marks",
           variant: "destructive",
         });
+        
+        // Initialize with default data if fetch fails
+        const defaultData = students.map((name, index) => {
+          const kitKatPoints = getInitialKitKatPoints(name);
+          return {
+            id: index + 1,
+            name,
+            uiDesign: 0,
+            userResearch: 0,
+            prototype: 0,
+            kitKatPoints,
+            total: kitKatPoints * 10,
+            comment: '',
+            lastModified: new Date().toISOString()
+          };
+        });
+        setStudentData(defaultData);
       }
     };
     fetchMarks();
@@ -76,14 +110,43 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
 
   const getInitialKitKatPoints = (name: string): number => {
     const kitKatMap: { [key: string]: number } = {
-      "Amito Kamble": 1,
+      "Aditi Gopal Hedau": 2,
+      "Aditi Soni": 1,
+      "Amito Kamble": 3,
       "Anchal Gupta": 2,
+      "Anish Arun Deshmukh": 1,
+      "Anna Christina Francis": 3,
+      "Anushka Gupta": 2,
       "Anushka Shrivastava": 3,
-      "Bhagesh Khongal": 1,
-      "Chahat Agarwal": 2,
+      "Arshi Khan": 1,
+      "Bhagesh Khongal": 2,
+      "Chahat Agarwal": 3,
+      "Dipesh Kumar": 1,
+      "Harsh Tripathi": 2,
+      "Insha Rashid": 3,
+      "Jay Bharat Kadam": 1,
+      "Kanika Thakur": 2,
       "Kartik Diwakar Durge": 3,
-      "Kunal Naidu": 1,
-      "Suhani Tongya": 2
+      "Krishna Agrawal": 1,
+      "Kunal Naidu": 2,
+      "Mansi Prabha": 3,
+      "Parth Nigam": 1,
+      "Pratham Sonar": 2,
+      "Preyanshi Shrivastava": 3,
+      "Radhika Udainia": 1,
+      "Rishika Goyal": 2,
+      "Ritika Singhal": 3,
+      "Saanvi Raje": 1,
+      "Shambhavi Vishal Kirtankar": 2,
+      "Shivraj Ranjeet Inamdar": 3,
+      "Sneha Natani": 1,
+      "Soumya Singh": 2,
+      "Sufal Joshi": 3,
+      "Suhani Tongya": 1,
+      "Tanishka Sharma": 2,
+      "Tanu Yadav": 3,
+      "Yash Sanjay Nandve": 1,
+      "Yashika Manglani": 2
     }
     return kitKatMap[name] || 0
   }
