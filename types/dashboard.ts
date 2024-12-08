@@ -7,10 +7,11 @@ export interface Student {
   kitKatPoints: number;
   total: number;
   comment: string;
-  lastModified: string;
+  lastModified?: string;
 }
+
+export interface StudentMarks extends Student {}
 
 export interface DashboardProps {
-  students: string[];
+  students: Student[];
 }
-

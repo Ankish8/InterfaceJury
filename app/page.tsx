@@ -1,6 +1,7 @@
 import StudentJuryDashboard from '@/components/student-jury-dashboard'
+import { Student } from '@/types/dashboard'
 
-const students = [
+const studentNames = [
   "Aditi Gopal Hedau",
   "Aditi Soni",
   "Amito Kamble",
@@ -40,6 +41,17 @@ const students = [
   "Yashika Manglani"
 ]
 
+const students: Student[] = studentNames.map((name, index) => ({
+  id: index + 1,
+  name,
+  uiDesign: 0,
+  userResearch: 0,
+  prototype: 0,
+  kitKatPoints: 0,
+  total: 0,
+  comment: ''
+}))
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-background">
@@ -47,4 +59,3 @@ export default function Home() {
     </main>
   )
 }
-

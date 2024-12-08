@@ -1,179 +1,62 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useCallback, useEffect, useState } from 'react'
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/use-toast"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Filter, ArrowUpDown, MessageSquare, X, Candy } from 'lucide-react'
-import { toast } from "@/components/ui/use-toast"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Filter, ArrowUpDown, MessageSquare, X, Candy } from 'lucide-react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import CharacterCount from '@tiptap/extension-character-count'
 import { Student, DashboardProps } from '../types/dashboard'
-import { motion, AnimatePresence } from 'framer-motion'
-import { getMarks, updateMarks as updateStudentMarks } from '@/lib/marks'
+import { motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 
-export default function StudentJuryDashboard({ students }: DashboardProps) {
+const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
+  const { toast } = useToast()
   const [studentData, setStudentData] = useState<Student[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Student; direction: 'ascending' | 'descending' } | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [filterStatus, setFilterStatus] = useState<'all' | 'marked' | 'unmarked'>('all')
   const [commentPopoverOpen, setCommentPopoverOpen] = useState<number | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Student; direction: 'ascending' | 'descending' } | null>(null)
 
   // TipTap editor setup
   const editor = useEditor({
-    extensions: [StarterKit, CharacterCount.configure({ limit: 500 })],
+    extensions: [
+      StarterKit,
+      CharacterCount.configure({
+        limit: 500
+      })
+    ],
     content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm focus:outline-none max-w-full min-h-[100px] p-2',
-      },
-    },
+    onUpdate: ({ editor }) => {
+      if (selectedStudent) {
+        const comment = editor.getText()
+        updateComment(selectedStudent.id, comment)
+      }
+    }
   })
 
-  useEffect(() => {
-    if (selectedStudent && commentPopoverOpen === selectedStudent.id) {
-      editor?.commands.setContent(selectedStudent.comment)
-    }
-  }, [selectedStudent, commentPopoverOpen, editor])
-
-  // Initialize student data
-  useEffect(() => {
-    const fetchMarks = async () => {
-      try {
-        const savedMarks = await getMarks();
-        const initialData = students.map((name, index) => {
-          const kitKatPoints = getInitialKitKatPoints(name);
-          const studentId = `student-${index + 1}`;
-          const savedStudentData = savedMarks[studentId];
-          
-          const studentData = {
-            id: index + 1,
-            name,
-            uiDesign: 0,
-            userResearch: 0,
-            prototype: 0,
-            kitKatPoints,
-            total: kitKatPoints * 10,
-            comment: '',
-            lastModified: new Date().toISOString()
-          };
-
-          if (savedStudentData) {
-            return {
-              ...studentData,
-              ...savedStudentData,
-              kitKatPoints: studentData.kitKatPoints, // Always use the predefined KitKat points
-              total: (savedStudentData.uiDesign || 0) + 
-                    (savedStudentData.userResearch || 0) + 
-                    (savedStudentData.prototype || 0) + 
-                    (studentData.kitKatPoints * 10)
-            };
-          }
-
-          return studentData;
-        });
-        setStudentData(initialData);
-      } catch (error) {
-        console.error('Failed to fetch marks:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch saved marks",
-          variant: "destructive",
-        });
-        
-        // Initialize with default data if fetch fails
-        const defaultData = students.map((name, index) => {
-          const kitKatPoints = getInitialKitKatPoints(name);
-          return {
-            id: index + 1,
-            name,
-            uiDesign: 0,
-            userResearch: 0,
-            prototype: 0,
-            kitKatPoints,
-            total: kitKatPoints * 10,
-            comment: '',
-            lastModified: new Date().toISOString()
-          };
-        });
-        setStudentData(defaultData);
-      }
-    };
-    fetchMarks();
-  }, [students]);
-
-  const getInitialKitKatPoints = (name: string): number => {
-    const kitKatMap: { [key: string]: number } = {
-      "Amito Kamble": 1,
-      "Anchal Gupta": 2,
-      "Anushka Shrivastava": 3,
-      "Bhagesh Khongal": 1,
-      "Chahat Agarwal": 2,
-      "Kartik Diwakar Durge": 3,
-      "Kunal Naidu": 1,
-      "Suhani Tongya": 2
-    }
-    return kitKatMap[name] || 0
-  }
-
-  const updateMarks = useCallback(async (id: number, field: 'uiDesign' | 'userResearch' | 'prototype', value: number) => {
-    setStudentData(prevData => {
-      const newData = prevData.map(student => {
-        if (student.id === id) {
-          const maxMarks = field === 'uiDesign' ? 50 : field === 'userResearch' ? 30 : 20;
-          const newValue = Math.min(Math.max(0, value), maxMarks);
-          if (value > maxMarks) {
-            toast({
-              title: "Warning",
-              description: `Maximum marks for ${field} is ${maxMarks}`,
-              variant: "destructive",
-            });
-          }
-          const updatedStudent = { 
-            ...student, 
-            [field]: newValue,
-            lastModified: new Date().toISOString()
-          };
-          const finalStudent = {
-            ...updatedStudent,
-            total: calculateTotal(updatedStudent)
-          };
-          
-          // Save to backend
-          saveMarks(`student-${id}`, {
-            ...finalStudent,
-            kitKatPoints: student.kitKatPoints
-          }).catch(() => {
-            toast({
-              title: "Error",
-              description: "Failed to save marks",
-              variant: "destructive",
-            });
-          });
-          
-          return finalStudent;
-        }
-        return student;
-      });
-      return newData;
-    });
-  }, []);
-
-  const saveMarks = useCallback(async (studentId: string, marks: any) => {
+  const saveMarks = useCallback(async (studentId: string, marks: Student) => {
     try {
-      // First try to check if the student exists
       const checkResponse = await fetch(`/api/marks`, {
         method: 'GET'
       });
       const existingData = await checkResponse.json();
       
-      // Determine if we should use POST or PUT
       const method = existingData[studentId] ? 'PUT' : 'POST';
       console.log(`Using ${method} for student ${studentId}`);
 
@@ -198,7 +81,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
       toast({
         title: "Success",
         description: "Marks saved successfully",
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error('Error saving marks:', error);
@@ -208,18 +91,114 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [toast]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const response = await fetch('/api/marks');
+        const savedMarks = await response.json();
+        
+        // Initialize data with default values
+        const initialData = students.map((student) => {
+          const savedData = savedMarks[`student-${student.id}`];
+          const kitKatPoints = getInitialKitKatPoints(student.name);
+          return {
+            ...student,
+            uiDesign: savedData?.uiDesign ?? 0,
+            userResearch: savedData?.userResearch ?? 0,
+            prototype: savedData?.prototype ?? 0,
+            kitKatPoints,
+            total: savedData?.total ?? kitKatPoints,
+            comment: savedData?.comment ?? '',
+            lastModified: savedData?.lastModified ?? new Date().toISOString()
+          };
+        });
+        
+        setStudentData(initialData);
+      } catch (error) {
+        console.error('Error loading marks:', error);
+        // Initialize with default values on error
+        setStudentData(students.map(student => {
+          const kitKatPoints = getInitialKitKatPoints(student.name);
+          return {
+            ...student,
+            uiDesign: 0,
+            userResearch: 0,
+            prototype: 0,
+            kitKatPoints,
+            total: kitKatPoints,
+            comment: '',
+            lastModified: new Date().toISOString()
+          };
+        }));
+      }
+    };
+
+    loadInitialData();
+  }, [students]);
+
+  const updateStudentScore = useCallback((id: number, field: keyof Student, value: number) => {
+    setStudentData(prevData =>
+      prevData.map(student => {
+        if (student.id === id) {
+          const updatedStudent = {
+            ...student,
+            [field]: value
+          };
+          
+          // Calculate total
+          const total = (
+            updatedStudent.uiDesign +
+            updatedStudent.userResearch +
+            updatedStudent.prototype +
+            updatedStudent.kitKatPoints
+          );
+          
+          const finalStudent = {
+            ...updatedStudent,
+            total
+          };
+          
+          // Save to backend
+          saveMarks(`student-${id}`, finalStudent);
+          
+          return finalStudent;
+        }
+        return student;
+      })
+    );
+  }, [saveMarks]);
 
   const updateComment = useCallback((id: number, comment: string) => {
     setStudentData(prevData =>
-      prevData.map(student =>
-        student.id === id ? { ...student, comment, lastModified: new Date().toISOString() } : student
-      )
-    )
-  }, [])
+      prevData.map(student => {
+        if (student.id === id) {
+          const updatedStudent = {
+            ...student,
+            comment
+          };
+          
+          saveMarks(`student-${id}`, updatedStudent);
+          return updatedStudent;
+        }
+        return student;
+      })
+    );
+  }, [saveMarks]);
 
-  const calculateTotal = (student: Student) => {
-    return student.uiDesign + student.userResearch + student.prototype + (student.kitKatPoints * 10)
+  const getInitialKitKatPoints = (name: string): number => {
+    const kitKatMap: { [key: string]: number } = {
+      "Amito Kamble": 1,
+      "Anchal Gupta": 2,
+      "Anushka Shrivastava": 3,
+      "Bhagesh Khongal": 1,
+      "Chahat Agarwal": 2,
+      "Kartik Diwakar Durge": 3,
+      "Kunal Naidu": 1,
+      "Suhani Tongya": 2
+    }
+    return kitKatMap[name] || 0
   }
 
   const getFilteredData = () => {
@@ -236,23 +215,28 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
         break
     }
 
+    if (sortConfig) {
+      filtered.sort((a, b) => {
+        if (sortConfig.key === 'name') {
+          return sortConfig.direction === 'ascending' 
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name)
+        }
+        
+        // Handle numeric fields
+        const aValue = Number(a[sortConfig.key])
+        const bValue = Number(b[sortConfig.key])
+        return sortConfig.direction === 'ascending'
+          ? aValue - bValue
+          : bValue - aValue
+      })
+    }
+
     return filtered
   }
 
-  const stats = useMemo(() => {
-    const data = studentData
-    return {
-      totalStudents: data.length,
-      markedStudents: data.filter(s => s.total > s.kitKatPoints * 10).length,
-      averageScore: (data.reduce((acc, s) => acc + s.total, 0) / data.length).toFixed(1)
-    }
-  }, [studentData])
-
-  const requestSort = (key: keyof Student) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
+  const handleSort = (key: keyof Student) => {
+    const direction = sortConfig?.key === key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
     setSortConfig({ key, direction });
   }
 
@@ -275,7 +259,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Total Students</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{stats.totalStudents}</div>
+            <div className="text-3xl font-bold text-gray-800">{studentData.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -283,7 +267,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Marked Students</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{stats.markedStudents}</div>
+            <div className="text-3xl font-bold text-gray-800">{studentData.filter(student => student.total > student.kitKatPoints * 10).length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -291,7 +275,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Average Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{stats.averageScore}</div>
+            <div className="text-3xl font-bold text-gray-800">{studentData.reduce((sum, student) => sum + student.total, 0) / studentData.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -333,7 +317,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
                   <span>Name</span>
                   <ArrowUpDown 
                     className="h-4 w-4 cursor-pointer" 
-                    onClick={() => requestSort('name')}
+                    onClick={() => handleSort('name')}
                   />
                 </div>
               </TableHead>
@@ -345,7 +329,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
                   <span>Total</span>
                   <ArrowUpDown 
                     className="h-4 w-4 cursor-pointer" 
-                    onClick={() => requestSort('total')}
+                    onClick={() => handleSort('total')}
                   />
                 </div>
               </TableHead>
@@ -377,7 +361,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
                       type="number"
                       placeholder="0"
                       value={student.uiDesign || ''}
-                      onChange={(e) => updateMarks(student.id, 'uiDesign', Number(e.target.value))}
+                      onChange={(e) => updateStudentScore(student.id, 'uiDesign', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -388,7 +372,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
                       type="number"
                       placeholder="0"
                       value={student.userResearch || ''}
-                      onChange={(e) => updateMarks(student.id, 'userResearch', Number(e.target.value))}
+                      onChange={(e) => updateStudentScore(student.id, 'userResearch', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -399,7 +383,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
                       type="number"
                       placeholder="0"
                       value={student.prototype || ''}
-                      onChange={(e) => updateMarks(student.id, 'prototype', Number(e.target.value))}
+                      onChange={(e) => updateStudentScore(student.id, 'prototype', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -485,3 +469,5 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
     </motion.div>
   )
 }
+
+export default StudentJuryDashboard;
