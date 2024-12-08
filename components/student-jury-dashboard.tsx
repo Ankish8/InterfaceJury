@@ -110,43 +110,14 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
 
   const getInitialKitKatPoints = (name: string): number => {
     const kitKatMap: { [key: string]: number } = {
-      "Aditi Gopal Hedau": 2,
-      "Aditi Soni": 1,
-      "Amito Kamble": 3,
+      "Amito Kamble": 1,
       "Anchal Gupta": 2,
-      "Anish Arun Deshmukh": 1,
-      "Anna Christina Francis": 3,
-      "Anushka Gupta": 2,
       "Anushka Shrivastava": 3,
-      "Arshi Khan": 1,
-      "Bhagesh Khongal": 2,
-      "Chahat Agarwal": 3,
-      "Dipesh Kumar": 1,
-      "Harsh Tripathi": 2,
-      "Insha Rashid": 3,
-      "Jay Bharat Kadam": 1,
-      "Kanika Thakur": 2,
+      "Bhagesh Khongal": 1,
+      "Chahat Agarwal": 2,
       "Kartik Diwakar Durge": 3,
-      "Krishna Agrawal": 1,
-      "Kunal Naidu": 2,
-      "Mansi Prabha": 3,
-      "Parth Nigam": 1,
-      "Pratham Sonar": 2,
-      "Preyanshi Shrivastava": 3,
-      "Radhika Udainia": 1,
-      "Rishika Goyal": 2,
-      "Ritika Singhal": 3,
-      "Saanvi Raje": 1,
-      "Shambhavi Vishal Kirtankar": 2,
-      "Shivraj Ranjeet Inamdar": 3,
-      "Sneha Natani": 1,
-      "Soumya Singh": 2,
-      "Sufal Joshi": 3,
-      "Suhani Tongya": 1,
-      "Tanishka Sharma": 2,
-      "Tanu Yadav": 3,
-      "Yash Sanjay Nandve": 1,
-      "Yashika Manglani": 2
+      "Kunal Naidu": 1,
+      "Suhani Tongya": 2
     }
     return kitKatMap[name] || 0
   }
