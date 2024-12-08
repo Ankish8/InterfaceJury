@@ -11,10 +11,14 @@ interface StudentMarks {
 }
 
 const getRedisClient = () => {
-  if (process.env.REDIS_URL) {
-    return new Redis(process.env.REDIS_URL)
-  }
-  return new Redis('redis://default:YxHtdLqlYGLq7XjJlfCdwt2yblBHySK6@redis-19834.c239.us-east-1-2.ec2.redns.redis-cloud.com:19834')
+  const url = process.env.REDIS_URL || 'redis://default:YxHtdLqlYGLq7XjJlfCdwt2yblBHySK6@redis-19834.c239.us-east-1-2.ec2.redns.redis-cloud.com:19834'
+  console.log('Connecting to Redis at:', url.replace(/:[^:]*@/, ':***@'))
+  return new Redis(url, {
+    retryStrategy: (times) => {
+      console.log(`Retry attempt ${times}`)
+      return Math.min(times * 50, 2000)
+    }
+  })
 }
 
 const redis = getRedisClient()
@@ -24,13 +28,20 @@ redis.on('error', (err) => {
 })
 
 redis.on('connect', () => {
-  console.log('Connected to Redis')
+  console.log('Connected to Redis successfully')
+})
+
+redis.on('ready', () => {
+  console.log('Redis client is ready')
 })
 
 const kv = {
   async hset(key: string, field: string, value: string) {
     try {
-      return await redis.hset(key, field, value)
+      console.log('Setting Redis hash:', { key, field, valueLength: value.length })
+      const result = await redis.hset(key, field, value)
+      console.log('Redis hset result:', result)
+      return result
     } catch (error) {
       console.error('Redis hset error:', error)
       throw error
@@ -38,10 +49,21 @@ const kv = {
   },
   async hgetall(key: string): Promise<Record<string, StudentMarks>> {
     try {
+      console.log('Getting all hash fields for key:', key)
       const data = await redis.hgetall(key)
-      return Object.fromEntries(
-        Object.entries(data || {}).map(([k, v]) => [k, JSON.parse(v) as StudentMarks])
+      console.log('Raw Redis data:', data)
+      const parsed = Object.fromEntries(
+        Object.entries(data || {}).map(([k, v]) => {
+          try {
+            return [k, JSON.parse(v) as StudentMarks]
+          } catch (e) {
+            console.error('Failed to parse value for key:', k, 'Error:', e)
+            return [k, null]
+          }
+        })
       )
+      console.log('Parsed data:', parsed)
+      return parsed
     } catch (error) {
       console.error('Redis hgetall error:', error)
       return {}
@@ -49,7 +71,10 @@ const kv = {
   },
   async hexists(key: string, field: string): Promise<number> {
     try {
-      return await redis.hexists(key, field)
+      console.log('Checking if hash exists:', { key, field })
+      const result = await redis.hexists(key, field)
+      console.log('Redis hexists result:', result)
+      return result
     } catch (error) {
       console.error('Redis hexists error:', error)
       return 0

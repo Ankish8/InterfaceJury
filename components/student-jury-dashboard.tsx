@@ -146,7 +146,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
           };
           
           // Save to backend
-          updateStudentMarks(`student-${id}`, {
+          saveMarks(`student-${id}`, {
             ...finalStudent,
             kitKatPoints: student.kitKatPoints
           }).catch(() => {
@@ -163,6 +163,51 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
       });
       return newData;
     });
+  }, []);
+
+  const saveMarks = useCallback(async (studentId: string, marks: any) => {
+    try {
+      // First try to check if the student exists
+      const checkResponse = await fetch(`/api/marks`, {
+        method: 'GET'
+      });
+      const existingData = await checkResponse.json();
+      
+      // Determine if we should use POST or PUT
+      const method = existingData[studentId] ? 'PUT' : 'POST';
+      console.log(`Using ${method} for student ${studentId}`);
+
+      const response = await fetch(`/api/marks`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId,
+          marks: {
+            ...marks,
+            lastModified: new Date().toISOString(),
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save marks');
+      }
+
+      toast({
+        title: "Success",
+        description: "Marks saved successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error('Error saving marks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save marks",
+        variant: "destructive",
+      });
+    }
   }, []);
 
   const updateComment = useCallback((id: number, comment: string) => {
