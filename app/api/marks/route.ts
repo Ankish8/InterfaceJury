@@ -6,7 +6,8 @@ export async function GET() {
   try {
     const marks = await kv.hgetall('marks');
     return NextResponse.json(marks || {});
-  } catch {
+  } catch (error) {
+    console.error('Error fetching marks:', error);
     return NextResponse.json({ error: 'Failed to fetch marks' }, { status: 500 });
   }
 }
@@ -24,9 +25,13 @@ export async function POST(request: Request) {
       );
     }
 
-    await kv.hset('marks', { [studentId]: marks });
+    // Convert marks object to field-value pairs for hset
+    const fieldValues = Object.entries(marks).flat();
+    await kv.hset('marks', studentId, JSON.stringify(marks));
+    
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error('Error saving marks:', error);
     return NextResponse.json(
       { error: 'Failed to save marks' },
       { status: 500 }
@@ -50,14 +55,15 @@ export async function PUT(request: Request) {
     const exists = await kv.hexists('marks', studentId);
     if (!exists) {
       return NextResponse.json(
-        { error: 'Student not found' },
+        { error: 'Student marks not found' },
         { status: 404 }
       );
     }
 
-    await kv.hset('marks', { [studentId]: marks });
+    await kv.hset('marks', studentId, JSON.stringify(marks));
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error('Error updating marks:', error);
     return NextResponse.json(
       { error: 'Failed to update marks' },
       { status: 500 }
