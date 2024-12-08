@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -109,7 +109,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
             userResearch: savedData?.userResearch ?? 0,
             prototype: savedData?.prototype ?? 0,
             kitKatPoints,
-            total: savedData?.total ?? kitKatPoints,
+            total: savedData?.total ?? kitKatPoints * 10,
             comment: savedData?.comment ?? '',
             lastModified: savedData?.lastModified ?? new Date().toISOString()
           };
@@ -127,7 +127,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
             userResearch: 0,
             prototype: 0,
             kitKatPoints,
-            total: kitKatPoints,
+            total: kitKatPoints * 10,
             comment: '',
             lastModified: new Date().toISOString()
           };
@@ -148,12 +148,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
           };
           
           // Calculate total
-          const total = (
-            updatedStudent.uiDesign +
-            updatedStudent.userResearch +
-            updatedStudent.prototype +
-            updatedStudent.kitKatPoints
-          );
+          const total = calculateTotal(updatedStudent);
           
           const finalStudent = {
             ...updatedStudent,
@@ -201,6 +196,10 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
     return kitKatMap[name] || 0
   }
 
+  const calculateTotal = (student: Student) => {
+    return student.uiDesign + student.userResearch + student.prototype + (student.kitKatPoints * 10)
+  }
+
   const getFilteredData = () => {
     let filtered = studentData.filter(student =>
       student.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -240,6 +239,68 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
     setSortConfig({ key, direction });
   }
 
+  const stats = useMemo(() => {
+    const data = studentData
+    const markedStudents = data.filter(s => s.total > s.kitKatPoints * 10)
+    return {
+      totalStudents: data.length,
+      markedStudents: markedStudents.length,
+      averageScore: markedStudents.length > 0 
+        ? Math.round(markedStudents.reduce((acc, s) => acc + s.total, 0) / markedStudents.length)
+        : 0
+    }
+  }, [studentData])
+
+  const updateMarks = useCallback(async (id: number, field: 'uiDesign' | 'userResearch' | 'prototype', value: number) => {
+    setStudentData(prevData => {
+      const newData = prevData.map(student => {
+        if (student.id === id) {
+          // Define max marks for each field
+          const maxMarks = field === 'uiDesign' ? 50 : field === 'userResearch' ? 30 : 20;
+          
+          // Ensure value is between 0 and maxMarks
+          const newValue = Math.min(Math.max(0, value), maxMarks);
+          
+          // Show toast if value exceeds max marks
+          if (value > maxMarks) {
+            toast({
+              title: "Warning",
+              description: `Maximum marks for ${field} is ${maxMarks}`,
+              variant: "destructive",
+            });
+          }
+          
+          const updatedStudent = { 
+            ...student, 
+            [field]: newValue,
+            lastModified: new Date().toISOString()
+          };
+          
+          const finalStudent = {
+            ...updatedStudent,
+            total: calculateTotal(updatedStudent)
+          };
+          
+          // Save to backend
+          saveMarks(`student-${id}`, {
+            ...finalStudent,
+            kitKatPoints: student.kitKatPoints
+          }).catch(() => {
+            toast({
+              title: "Error",
+              description: "Failed to save marks",
+              variant: "destructive",
+            });
+          });
+          
+          return finalStudent;
+        }
+        return student;
+      });
+      return newData;
+    });
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -259,7 +320,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
             <CardTitle className="text-sm font-medium text-gray-500">Total Students</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{studentData.length}</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.totalStudents}</div>
           </CardContent>
         </Card>
         <Card>
@@ -267,7 +328,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
             <CardTitle className="text-sm font-medium text-gray-500">Marked Students</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{studentData.filter(student => student.total > student.kitKatPoints * 10).length}</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.markedStudents}</div>
           </CardContent>
         </Card>
         <Card>
@@ -275,7 +336,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
             <CardTitle className="text-sm font-medium text-gray-500">Average Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-800">{studentData.reduce((sum, student) => sum + student.total, 0) / studentData.length}</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.averageScore}</div>
           </CardContent>
         </Card>
       </div>
@@ -361,7 +422,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
                       type="number"
                       placeholder="0"
                       value={student.uiDesign || ''}
-                      onChange={(e) => updateStudentScore(student.id, 'uiDesign', Number(e.target.value))}
+                      onChange={(e) => updateMarks(student.id, 'uiDesign', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -372,7 +433,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
                       type="number"
                       placeholder="0"
                       value={student.userResearch || ''}
-                      onChange={(e) => updateStudentScore(student.id, 'userResearch', Number(e.target.value))}
+                      onChange={(e) => updateMarks(student.id, 'userResearch', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -383,7 +444,7 @@ const StudentJuryDashboard: React.FC<DashboardProps> = ({ students }) => {
                       type="number"
                       placeholder="0"
                       value={student.prototype || ''}
-                      onChange={(e) => updateStudentScore(student.id, 'prototype', Number(e.target.value))}
+                      onChange={(e) => updateMarks(student.id, 'prototype', Number(e.target.value))}
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = '0'}
                       className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
