@@ -1,5 +1,17 @@
+export type StudentMarks = {
+  id: number;
+  name: string;
+  uiDesign: number;
+  userResearch: number;
+  prototype: number;
+  kitKatPoints: number;
+  total: number;
+  comment: string;
+  lastModified: string;
+};
+
 export type Marks = {
-  [key: string]: number;
+  [key: string]: StudentMarks;
 };
 
 export async function getMarks() {
@@ -7,10 +19,10 @@ export async function getMarks() {
   if (!response.ok) {
     throw new Error('Failed to fetch marks');
   }
-  return response.json();
+  return response.json() as Promise<Marks>;
 }
 
-export async function saveMarks(studentId: string, marks: number) {
+export async function saveMarks(studentId: string, marks: StudentMarks) {
   const response = await fetch('/api/marks', {
     method: 'POST',
     headers: {
@@ -25,7 +37,7 @@ export async function saveMarks(studentId: string, marks: number) {
   return response.json();
 }
 
-export async function updateMarks(studentId: string, marks: number) {
+export async function updateMarks(studentId: string, marks: StudentMarks) {
   const response = await fetch('/api/marks', {
     method: 'PUT',
     headers: {

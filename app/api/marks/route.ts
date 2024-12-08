@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const marks = await kv.hgetall('marks');
     return NextResponse.json(marks || {});
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch marks' }, { status: 500 });
   }
 }
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     await kv.hset('marks', { [studentId]: marks });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to save marks' },
       { status: 500 }
@@ -57,7 +57,7 @@ export async function PUT(request: Request) {
 
     await kv.hset('marks', { [studentId]: marks });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update marks' },
       { status: 500 }

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Pencil, Filter, ArrowUpDown, MessageSquare, X, Candy } from 'lucide-react'
+import { Filter, ArrowUpDown, MessageSquare, X, Candy } from 'lucide-react'
 import { toast } from "@/components/ui/use-toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +15,7 @@ import StarterKit from '@tiptap/starter-kit'
 import CharacterCount from '@tiptap/extension-character-count'
 import { Student, DashboardProps } from '../types/dashboard'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getMarks, saveMarks, updateMarks as updateStudentMarks } from '@/lib/marks'
+import { getMarks, updateMarks as updateStudentMarks } from '@/lib/marks'
 
 export default function StudentJuryDashboard({ students }: DashboardProps) {
   const [studentData, setStudentData] = useState<Student[]>([])
@@ -63,7 +63,7 @@ export default function StudentJuryDashboard({ students }: DashboardProps) {
           }
         });
         setStudentData(initialData);
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Failed to fetch saved marks",
