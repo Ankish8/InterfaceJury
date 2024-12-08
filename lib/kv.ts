@@ -1,5 +1,15 @@
 import Redis from 'ioredis'
 
+interface StudentMarks {
+  uiDesign: number
+  userResearch: number
+  prototype: number
+  kitKatPoints: number
+  total: number
+  comment: string
+  lastModified: string
+}
+
 const getRedisClient = () => {
   if (process.env.REDIS_URL) {
     return new Redis(process.env.REDIS_URL)
@@ -18,7 +28,7 @@ redis.on('connect', () => {
 })
 
 const kv = {
-  async hset(key: string, field: string, value: any) {
+  async hset(key: string, field: string, value: string) {
     try {
       return await redis.hset(key, field, value)
     } catch (error) {
@@ -26,25 +36,25 @@ const kv = {
       throw error
     }
   },
-  async hgetall(key: string) {
+  async hgetall(key: string): Promise<Record<string, StudentMarks>> {
     try {
       const data = await redis.hgetall(key)
       return Object.fromEntries(
-        Object.entries(data || {}).map(([k, v]) => [k, JSON.parse(v)])
+        Object.entries(data || {}).map(([k, v]) => [k, JSON.parse(v) as StudentMarks])
       )
     } catch (error) {
       console.error('Redis hgetall error:', error)
       return {}
     }
   },
-  async hexists(key: string, field: string) {
+  async hexists(key: string, field: string): Promise<number> {
     try {
       return await redis.hexists(key, field)
     } catch (error) {
       console.error('Redis hexists error:', error)
-      return false
+      return 0
     }
   }
 }
 
-export { kv }
+export { kv, type StudentMarks }

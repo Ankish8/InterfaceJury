@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@/lib/kv';
+import { kv, type StudentMarks } from '@/lib/kv';
 
 // GET all marks
 export async function GET() {
@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { studentId, marks } = body;
+    const { studentId, marks }: { studentId: string, marks: StudentMarks } = body;
     
     if (!studentId || !marks) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { studentId, marks } = body;
+    const { studentId, marks }: { studentId: string, marks: StudentMarks } = body;
     
     if (!studentId || !marks) {
       return NextResponse.json(
