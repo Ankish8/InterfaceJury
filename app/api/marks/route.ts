@@ -25,10 +25,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Convert marks object to field-value pairs for hset
-    const fieldValues = Object.entries(marks).flat();
     await kv.hset('marks', studentId, JSON.stringify(marks));
-    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving marks:', error);
